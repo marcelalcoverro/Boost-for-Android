@@ -1,0 +1,1 @@
+./build-android.sh --boost=1.60.0 --with-libraries=serialization,system,thread,filesystem,date_time,program_options /Users/marcel/NVPACK/android-ndk-r12b

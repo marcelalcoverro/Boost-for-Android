@@ -57,6 +57,10 @@ boost_version()
     BOOST_VER1=1
     BOOST_VER2=45
     BOOST_VER3=0
+  elif [ "$1" = "1.60.0" ]; then
+    BOOST_VER1=1
+    BOOST_VER2=60
+    BOOST_VER3=0
   else
     echo "Unsupported boost version '$1'."
     exit 1
@@ -89,11 +93,11 @@ do_with_libraries () {
   for lib in $(echo $1 | tr ',' '\n') ; do LIBRARIES="--with-$lib ${LIBRARIES}"; done 
 }
 
-register_option "--without-libraries=<list>" do_without_libraries "Comma separated list of libraries to exclude from the build."
-do_without_libraries () {	LIBRARIES="--without-libraries=$1"; }
-do_without_libraries () { 
-  for lib in $(echo $1 | tr ',' '\n') ; do LIBRARIES="--without-$lib ${LIBRARIES}"; done 
-}
+#register_option "--without-libraries=<list>" do_without_libraries "Comma separated list of libraries to exclude from the build."
+#do_without_libraries () {	LIBRARIES="--without-libraries=$1"; }
+#do_without_libraries () { 
+#  for lib in $(echo $1 | tr ',' '\n') ; do LIBRARIES="--without-$lib ${LIBRARIES}"; done 
+#}
 
 register_option "--prefix=<path>" do_prefix "Prefix to be used when installing libraries and includes."
 do_prefix () {
@@ -116,7 +120,7 @@ echo "Building boost version: $BOOST_VER1.$BOOST_VER2.$BOOST_VER3"
 # -----------------------
 
 BOOST_DOWNLOAD_LINK="http://downloads.sourceforge.net/project/boost/boost/$BOOST_VER1.$BOOST_VER2.$BOOST_VER3/boost_${BOOST_VER1}_${BOOST_VER2}_${BOOST_VER3}.tar.bz2?r=http%3A%2F%2Fsourceforge.net%2Fprojects%2Fboost%2Ffiles%2Fboost%2F${BOOST_VER1}.${BOOST_VER2}.${BOOST_VER3}%2F&ts=1291326673&use_mirror=garr"
-BOOST_TAR="boost_${BOOST_VER1}_${BOOST_VER2}_${BOOST_VER3}.tar.bz2"
+BOOST_TAR="boost_${BOOST_VER1}_${BOOST_VER2}_${BOOST_VER3}.tar.gz"
 BOOST_DIR="boost_${BOOST_VER1}_${BOOST_VER2}_${BOOST_VER3}"
 BUILD_DIR="./build/"
 
@@ -135,6 +139,7 @@ if [ $CLEAN = yes ] ; then
 	echo "Cleaning: logs"
 	rm -f -r logs
 	rm -f build.log
+	mkdir $PROGDIR/$BUILD_DIR
 
   [ "$DOWNLOAD" = "yes" ] || exit 0
 fi
@@ -195,25 +200,25 @@ case "$HOST_OS" in
         PlatformOS=linux
 esac
 
-NDK_RELEASE_FILE=$AndroidNDKRoot"/RELEASE.TXT"
-if [ -f "${NDK_RELEASE_FILE}" ]; then
-    NDK_RN=`cat $NDK_RELEASE_FILE | sed 's/^r\(.*\)$/\1/g'`
-elif [ -n "${AndroidSourcesDetected}" ]; then
-    if [ -f "${ANDROID_BUILD_TOP}/ndk/docs/CHANGES.html" ]; then
-        NDK_RELEASE_FILE="${ANDROID_BUILD_TOP}/ndk/docs/CHANGES.html"
-        NDK_RN=`grep "android-ndk-" "${NDK_RELEASE_FILE}" | head -1 | sed 's/^.*r\(.*\)$/\1/'`
-    elif [ -f "${ANDROID_BUILD_TOP}/ndk/docs/text/CHANGES.text" ]; then
-        NDK_RELEASE_FILE="${ANDROID_BUILD_TOP}/ndk/docs/text/CHANGES.text"
-        NDK_RN=`grep "android-ndk-" "${NDK_RELEASE_FILE}" | head -1 | sed 's/^.*r\(.*\)$/\1/'`
-    else
-        dump "ERROR: can not find ndk version"
-        exit 1
-    fi
-else
-    dump "ERROR: can not find ndk version"
-    exit 1
-fi
-
+#NDK_RELEASE_FILE=$AndroidNDKRoot"/RELEASE.TXT"
+#if [ -f "${NDK_RELEASE_FILE}" ]; then
+#    NDK_RN=`cat $NDK_RELEASE_FILE | sed 's/^r\(.*\)$/\1/g'`
+#elif [ -n "${AndroidSourcesDetected}" ]; then
+#    if [ -f "${ANDROID_BUILD_TOP}/ndk/docs/CHANGES.html" ]; then
+#        NDK_RELEASE_FILE="${ANDROID_BUILD_TOP}/ndk/docs/CHANGES.html"
+#        NDK_RN=`grep "android-ndk-" "${NDK_RELEASE_FILE}" | head -1 | sed 's/^.*r\(.*\)$/\1/'`
+#    elif [ -f "${ANDROID_BUILD_TOP}/ndk/docs/text/CHANGES.text" ]; then
+#        NDK_RELEASE_FILE="${ANDROID_BUILD_TOP}/ndk/docs/text/CHANGES.text"
+#        NDK_RN=`grep "android-ndk-" "${NDK_RELEASE_FILE}" | head -1 | sed 's/^.*r\(.*\)$/\1/'`
+#    else
+#        dump "ERROR: can not find ndk version"
+#        exit 1
+#    fi
+#else
+#    dump "ERROR: can not find ndk version"
+#    exit 1
+#fi
+NDK_RN=12b
 echo "Detected Android NDK version $NDK_RN"
 
 case "$NDK_RN" in
@@ -261,6 +266,11 @@ case "$NDK_RN" in
 		TOOLCHAIN=${TOOLCHAIN:-arm-linux-androideabi-4.6}
 		CXXPATH=$AndroidNDKRoot/toolchains/${TOOLCHAIN}/prebuilt/${PlatformOS}-x86_64/bin/arm-linux-androideabi-g++
 		TOOLSET=gcc-androidR8e
+		;;
+	"12 (64-bit)"|"12b"|"12c (64-bit)"|"12d (64-bit)")
+		TOOLCHAIN=${TOOLCHAIN:-arm-linux-androideabi-4.9}
+		CXXPATH=$AndroidNDKRoot/toolchains/${TOOLCHAIN}/prebuilt/${PlatformOS}-x86_64/bin/arm-linux-androideabi-g++
+		TOOLSET=gcc
 		;;
 	*)
 		echo "Undefined or not supported Android NDK version!"
@@ -345,7 +355,7 @@ then
   BOOST_VER=${BOOST_VER1}_${BOOST_VER2}_${BOOST_VER3}
   PATCH_BOOST_DIR=$PROGDIR/patches/boost-${BOOST_VER}
 
-  cp configs/user-config-boost-${BOOST_VER}.jam $BOOST_DIR/tools/build/v2/user-config.jam
+  cp configs/user-config-boost-${BOOST_VER}.jam $BOOST_DIR/project-config.jam
 
   for dir in $PATCH_BOOST_DIR; do
     if [ ! -d "$dir" ]; then
@@ -380,7 +390,7 @@ fi
 echo "# ---------------"
 echo "# Build using NDK"
 echo "# ---------------"
-
+echo $LIBRARIES
 # Build boost for android
 echo "Building boost for android"
 (
@@ -405,24 +415,28 @@ echo "Building boost for android"
   export PATH=$AndroidBinariesPath:$PATH
   export AndroidNDKRoot
   export NO_BZIP2=1
+ 
+  mkdir $BUILD_DIR
 
   cxxflags=""
   for flag in $CXXFLAGS; do cxxflags="$cxxflags cxxflags=$flag"; done
 
-  { ./bjam -q                         \
+  { ./b2 -q                         \
          target-os=linux              \
          toolset=$TOOLSET             \
          $cxxflags                    \
          link=static                  \
          threading=multi              \
-         --layout=versioned           \
-         --without-python             \
-         -sICONV_PATH=`pwd`/../libiconv-libicu-android/armeabi \
-         -sICU_PATH=`pwd`/../libiconv-libicu-android/armeabi \
-         --prefix="./../$BUILD_DIR/"  \
-         $LIBRARIES                   \
-         install 2>&1                 \
-         || { dump "ERROR: Failed to build boost for android!" ; exit 1 ; }
+         --layout=system           \
+         --prefix=/Users/marcel/Development/ShieldDevelopment/boost_build \
+         $LIBRARIES \
+         install            
+#         -sICONV_PATH=`pwd`/../libiconv-libicu-android/armeabi \
+#         -sICU_PATH=`pwd`/../libiconv-libicu-android/armeabi \
+#         $LIBRARIES                   \
+#         -without-locale			\
+#         install 2>&1                 \
+#         || { dump "ERROR: Failed to build boost for android!" ; exit 1 ; }
   } | tee -a $PROGDIR/build.log
 
   # PIPESTATUS variable is defined only in Bash, and we are using /bin/sh, which is not Bash on newer Debian/Ubuntu
